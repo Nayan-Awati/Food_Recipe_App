@@ -20,7 +20,8 @@ import retrofit2.Response
 import java.util.jar.Manifest
 import javax.security.auth.callback.Callback
 
-class SplashActivity : BaseActivity(), EasyPermissions.RationaleCallbacks, EasyPermissions.PermissionCallbacks  {
+class SplashActivity : BaseActivity(), EasyPermissions.RationaleCallbacks,
+    EasyPermissions.PermissionCallbacks {
     private var READ_STORAGE_PERM = 123
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +35,7 @@ class SplashActivity : BaseActivity(), EasyPermissions.RationaleCallbacks, EasyP
             finish()
         }
     }
+
 
     fun getCategories() {
         val service = RetrofitClientInstance.retrofitInstance!!.create(GetDataService::class.java)
@@ -60,48 +62,50 @@ class SplashActivity : BaseActivity(), EasyPermissions.RationaleCallbacks, EasyP
     }
 
 
-    fun getMeal(categoryName:String) {
+    fun getMeal(categoryName: String) {
         val service = RetrofitClientInstance.retrofitInstance!!.create(GetDataService::class.java)
         val call = service.getMealList(categoryName)
         call.enqueue(object : retrofit2.Callback<Meal> {
+            override fun onFailure(call: Call<Meal>, t: Throwable) {
+
+                loader.visibility = View.INVISIBLE
+                Toast.makeText(this@SplashActivity, "Something went wrong", Toast.LENGTH_SHORT)
+                    .show()
+            }
 
             override fun onResponse(
                 call: Call<Meal>,
                 response: Response<Meal>
             ) {
-                insertMealDataIntoRoomDb(categoryName,response.body())
+
+                insertMealDataIntoRoomDb(categoryName, response.body())
             }
 
-            override fun onFailure(call: Call<Meal>, t: Throwable) {
-                loader.visibility = View.INVISIBLE
-                Toast.makeText(this@SplashActivity, "Something went wrong", Toast.LENGTH_SHORT)
-                    .show()
-            }
         })
     }
 
-
-
-    fun insertDataIntoRoomDb(category: Category?){
+    fun insertDataIntoRoomDb(category: Category?) {
 
         launch {
             this.let {
-                for(arr in category!!.categorieitems!!){
+
+                for (arr in category!!.categorieitems!!) {
                     RecipeDatabase.getDatabase(this@SplashActivity)
                         .recipeDao().insertCategory(arr)
                 }
             }
         }
 
+
     }
 
-    fun insertMealDataIntoRoomDb(categoryName:String ,meal: Meal?){
+    fun insertMealDataIntoRoomDb(categoryName: String, meal: Meal?) {
 
         launch {
             this.let {
 
 
-                 for(arr in meal!!.mealsItems!!){
+                for (arr in meal!!.mealsItems!!) {
                     var mealItemModel = MealsItems(
                         arr.id,
                         arr.idMeal,
@@ -109,38 +113,41 @@ class SplashActivity : BaseActivity(), EasyPermissions.RationaleCallbacks, EasyP
                         arr.strMeal,
                         arr.strMealThumb
                     )
-
                     RecipeDatabase.getDatabase(this@SplashActivity)
                         .recipeDao().insertMeal(mealItemModel)
-                    Log.d("mealData",arr.toString())
+                    Log.d("mealData", arr.toString())
                 }
+
                 btnGetStarted.visibility = View.VISIBLE
             }
         }
 
+
     }
 
-    fun clearDataBase(){
+    fun clearDataBase() {
         launch {
             this.let {
                 RecipeDatabase.getDatabase(this@SplashActivity).recipeDao().clearDb()
-
             }
         }
     }
 
-    private fun hasReadStoragePermission():Boolean{
-        return EasyPermissions.hasPermissions(this,android.Manifest.permission.READ_EXTERNAL_STORAGE)
+    private fun hasReadStoragePermission(): Boolean {
+        return EasyPermissions.hasPermissions(
+            this,
+            android.Manifest.permission.READ_EXTERNAL_STORAGE
+        )
     }
 
-    private fun readStorageTask(){
-        if(hasReadStoragePermission()){
+    private fun readStorageTask() {
+        if (hasReadStoragePermission()) {
             clearDataBase()
             getCategories()
-        }else{
+        } else {
             EasyPermissions.requestPermissions(
                 this,
-                "This app needs access to your storage!",
+                "This app needs access to your storage,",
                 READ_STORAGE_PERM,
                 android.Manifest.permission.READ_EXTERNAL_STORAGE
             )
@@ -153,23 +160,24 @@ class SplashActivity : BaseActivity(), EasyPermissions.RationaleCallbacks, EasyP
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this )
-    }
-    override fun onRationaleAccepted(requestCode: Int) {
-
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this)
     }
 
     override fun onRationaleDenied(requestCode: Int) {
 
     }
 
-    override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
+    override fun onRationaleAccepted(requestCode: Int) {
 
     }
 
     override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {
-        if(EasyPermissions.somePermissionPermanentlyDenied(this,perms)){
+        if (EasyPermissions.somePermissionPermanentlyDenied(this, perms)) {
             AppSettingsDialog.Builder(this).build().show()
         }
+    }
+
+    override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
+
     }
 }
